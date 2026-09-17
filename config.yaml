@@ -119,31 +119,6 @@ sources:
       - "Côte d'Ivoire"
       - "Remote"
 
-  emploici:
-    # EN SOMMEIL — constaté le 17/09/2026 : Cloudflare sert un challenge
-    # Turnstile qui ne cède ni en headless, ni en fenêtre réelle avec
-    # profil persistant. Même /robots.txt répond 403. Novojob prend le
-    # relais sur le même gisement d'annonces ivoiriennes.
-    # Repasser à true pour retenter (le code est prêt).
-    activee: false
-    url: "https://www.emploi.ci/recherche-jobs-cote-ivoire"
-    pages: 2
-    # emploi.ci est derrière Cloudflare : une requête HTTP simple reçoit
-    # une page de défi, pas les annonces. Avec navigateur: true et
-    # Playwright installé, le robot ouvre un vrai Chromium et passe.
-    # Sans Playwright, la source est sautée avec un avertissement, et
-    # le reste du cycle continue normalement.
-    navigateur: true
-
-  afriwork:
-    # EN SOMMEIL — afriworket.com est « Afriwork Ethiopia » (numéros
-    # +251), pas une source ivoirienne, et ses annonces exigent un
-    # compte. Le module reste en place : il suffit de lui donner la
-    # bonne adresse dans « url » et de repasser à true.
-    activee: false
-    url: "https://afriworket.com/jobs"
-    navigateur: true
-
 # ─── Planification ───────────────────────────────────────────────────
 planification:
   intervalle_heures: 6     # un rapport toutes les six heures

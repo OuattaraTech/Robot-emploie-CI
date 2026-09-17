@@ -6,7 +6,6 @@ openpyxl>=3.1
 PyYAML>=6.0
 python-dotenv>=1.0
 
-# Optionnel : uniquement pour les sources en sommeil (emploici, afriwork),
-# qui réclament un vrai navigateur. Installer, puis lancer :
-#   playwright install chromium
+# Optionnel : recours automatique quand un site refuse les requêtes
+# simples. Installer, puis lancer « playwright install chromium ».
 # playwright>=1.44

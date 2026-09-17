@@ -6,7 +6,7 @@ email les offres qui correspondent à un profil précis.
 Chercher un emploi en Côte d'Ivoire, c'est visiter les mêmes sites plusieurs
 fois par jour et relire les mêmes annonces. Ce robot le fait à la place du
 candidat, vingt-quatre heures sur vingt-quatre : il parcourt **LinkedIn**,
-**Novojob**, **JobnetAfrica** et **EmploiCI**, filtre chaque annonce selon le
+**Novojob** et **JobnetAfrica**, filtre chaque annonce selon le
 profil et les compétences visées, écarte celles déjà vues, puis compose toutes
 les six heures un rapport envoyé par email — avec, pour chaque offre, le lien
 direct pour postuler. Les résultats partent aussi en Excel et en notification
@@ -44,7 +44,7 @@ python main.py --boucle     # en continu, un rapport toutes les six heures
 | `python main.py` | un cycle complet, puis arrêt |
 | `python main.py --boucle` | un cycle toutes les six heures, sans fin |
 | `python main.py --essai` | affiche le rapport sans rien envoyer ni mémoriser |
-| `python main.py --sources linkedin,emploici` | n'interroge que ces sources |
+| `python main.py --sources linkedin,novojob` | n'interroge que ces sources |
 | `python main.py --test-email` | envoie un message de test et s'arrête |
 | `python main.py --etat` | ce que la mémoire contient |
 | `python main.py --oublier-tout` | vide la mémoire : tout redeviendra « nouveau » |
@@ -107,34 +107,29 @@ python main.py --test-email
 
 ## Les sources
 
-État constaté le **17 septembre 2026**, chaque site testé en conditions réelles.
+Trois sites, tous vérifiés en conditions réelles le **17 septembre 2026**.
 
-| Source | Accès | État |
+| Source | Accès | Volume constaté |
 |---|---|---|
-| **LinkedIn** | API publique des offres, sans compte ni cookie | ✅ actif — 40 annonces au dernier cycle |
-| **Novojob** | pages publiques, HTTP simple | ✅ actif — 68 annonces au dernier cycle |
-| **JobnetAfrica** | page publique `/jobs/`, filtrée sur le pays | ✅ actif — postes internationaux, volume faible |
-| **EmploiCI** | Cloudflare Turnstile | ⛔ en sommeil |
-| **Afriwork** | mauvais pays | ⛔ en sommeil |
+| **LinkedIn** | API publique des offres, sans compte ni cookie | 40 annonces par cycle |
+| **Novojob** | pages publiques, HTTP simple | 68 annonces par cycle |
+| **JobnetAfrica** | page publique `/jobs/`, filtrée sur le pays | postes internationaux, volume faible |
 
-### Pourquoi deux sources dorment
+**LinkedIn** porte l'essentiel du rapport. Chaque mot-clé de `recherches` est
+une recherche à part entière ; le dédoublonnage se charge des annonces qui
+remontent dans plusieurs.
 
-**EmploiCI.** Le site est passé sous un challenge Cloudflare Turnstile qui ne
-cède ni en Chromium headless, ni en fenêtre réelle avec profil persistant et
-`navigator.webdriver` masqué. Même `/robots.txt` répond 403 : le blocage est au
-bord du réseau, pas dans la page. Passer outre demanderait un service de
-résolution de captcha — fragile, payant, et franchement hostile envers le site.
-Le module reste en place et fonctionnera tel quel le jour où l'accès rouvre :
-`activee: true` dans `config.yaml` suffit à le réveiller.
+```yaml
+linkedin:
+  recherches: ["développeur", "developer", "data analyst", "agro"]
+  lieu: "Côte d'Ivoire"
+  pages: 2               # 25 annonces par page et par mot-clé
+  anciennete: "r604800"  # 7 jours — r86400 pour les dernières 24 h
+```
 
-**Afriwork.** `afriworket.com` est *Afriwork Ethiopia* — numéros +251, annonces
-éthiopiennes, listes réservées aux comptes connectés. Ce n'est pas une source
-ivoirienne. Le module reste utilisable : lui donner la bonne adresse dans `url`
-et repasser `activee` à `true`.
-
-**Novojob les remplace** sur le même gisement : annonces ivoiriennes, mêmes
-entreprises (SOLIBRA, groupes locaux), et des rubriques par métier qu'on cible
-directement dans `config.yaml` :
+**Novojob** se cible par rubrique métier. Le catalogue complet est sur
+`novojob.com/cote-d-ivoire/offres-d-emploi/offres-par-fonction` ; on ajoute
+autant d'adresses qu'on veut, le robot les enchaîne.
 
 ```yaml
 novojob:
@@ -143,25 +138,32 @@ novojob:
     - ".../offres-par-fonction/365-informatique-systemes-d-information-internet"
 ```
 
-Le catalogue complet des rubriques :
-`novojob.com/cote-d-ivoire/offres-d-emploi/offres-par-fonction`
+### Deux sites écartés, et pourquoi
 
-### Playwright
+**emploi.ci** est passé sous un challenge Cloudflare Turnstile qui ne cède ni en
+Chromium headless, ni en fenêtre réelle avec profil persistant. Même
+`/robots.txt` répond 403 : le blocage est au bord du réseau, pas dans la page.
+Passer outre demanderait un service de résolution de captcha — fragile, payant,
+et hostile envers le site. **Novojob couvre le même gisement d'annonces
+ivoiriennes**, et se lit sans contorsion.
 
-Deux sources en sommeil sont écrites pour un vrai navigateur. Si tu les
-réactives un jour :
+**afriworket.com** est *Afriwork Ethiopia* — numéros +251, annonces
+éthiopiennes, listes réservées aux comptes connectés. Ce n'était pas une source
+ivoirienne.
+
+### Ajouter un site
+
+Écrire un module dans `robot_emploi/sources/`, sur le modèle de `novojob.py`
+(le plus classique : des cartes HTML à parcourir), puis l'inscrire dans
+`sources/__init__.py`. Une source ne filtre ni ne dédoublonne : elle rend tout
+ce qu'elle trouve, le reste du robot s'en charge.
+
+Si le site refuse les requêtes simples, `Source.html()` retente
+automatiquement dans un vrai Chromium — à condition que Playwright soit là :
 
 ```bash
-pip install playwright
-playwright install chromium     # ~150 Mo, une seule fois
+pip install playwright && playwright install chromium
 ```
-
-Sans Playwright, une source qui en réclame est **sautée avec un avertissement**
-et le cycle continue sur les autres : le rapport part quand même. C'est voulu —
-un site en panne, bloqué ou refondu ne doit jamais faire tomber la veille.
-
-Pour ajouter un site : écrire un module dans `robot_emploi/sources/`, sur le
-modèle de `novojob.py`, et l'inscrire dans `sources/__init__.py`.
 
 ---
 
@@ -229,8 +231,7 @@ robot_emploi/
   memoire.py                 SQLite : annonces vues, cycles, purge
   export_excel.py            le classeur
   rapport.py                 le rapport en HTML, en texte, en Telegram
-  sources/                   un module par site surveillé
-                             (linkedin, novojob, jobnetafrica, emploici, afriwork)
+  sources/                   linkedin.py, novojob.py, jobnetafrica.py
   notifications/             email SMTP, Telegram
 ```
 
@@ -246,7 +247,6 @@ suivant part six heures plus tard comme si de rien n'était.
 | Symptôme | Cause la plus fréquente |
 |---|---|
 | `SMTP : identifiants refusés` | mot de passe du compte au lieu du mot de passe d'application |
-| `source sautée — Playwright n'est pas installé` | normal : voir la section Sources |
 | Zéro offre retenue | `score_minimum` trop haut, ou `intitules` trop étroits |
 | Les mêmes offres reviennent | la mémoire a été vidée, ou le fichier `donnees/offres.sqlite3` a disparu |
 | Une source rend 0 annonce du jour au lendemain | le site a été refondu : ajuster les sélecteurs de son module |

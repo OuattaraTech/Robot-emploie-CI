@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from ..reseau import Navigateur
-from .afriwork import Afriwork
 from .base import Source
-from .emploici import EmploiCI
 from .jobnetafrica import JobnetAfrica
 from .linkedin import LinkedIn
 from .novojob import Novojob
@@ -14,8 +12,6 @@ REGISTRE: dict[str, type[Source]] = {
     LinkedIn.nom: LinkedIn,
     Novojob.nom: Novojob,
     JobnetAfrica.nom: JobnetAfrica,
-    EmploiCI.nom: EmploiCI,
-    Afriwork.nom: Afriwork,
 }
 
 
