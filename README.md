@@ -169,14 +169,46 @@ pip install playwright && playwright install chromium
 
 ## Faire tourner le robot en permanence
 
-### Avec cron — le plus simple
+### Sur GitHub Actions — recommandé, gratuit, aucune machine à allumer
+
+Le dépôt embarque `.github/workflows/veille.yml` : GitHub exécute un cycle
+toutes les six heures sur ses propres serveurs. La Côte d'Ivoire étant à UTC+0
+toute l'année, les rapports tombent à **00 h, 06 h, 12 h et 18 h** heure locale.
+
+Une seule chose à faire, une fois : déposer les secrets dans
+**Settings → Secrets and variables → Actions → New repository secret**.
+
+| Secret | Valeur |
+|---|---|
+| `SMTP_HOTE` | `smtp.gmail.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_UTILISATEUR` | ton adresse Gmail |
+| `SMTP_MOTDEPASSE` | le **mot de passe d'application**, pas celui du compte |
+| `EMAIL_EXPEDITEUR` | ton adresse Gmail |
+| `EMAIL_DESTINATAIRES` | où recevoir les rapports, séparés par des virgules |
+| `TELEGRAM_JETON` | facultatif |
+| `TELEGRAM_CHAT_ID` | facultatif |
+
+Onglet **Actions → Veille emploi → Run workflow** déclenche un cycle
+immédiatement, sans attendre la prochaine échéance.
+
+**La mémoire des annonces vues** est rangée dans le cache GitHub entre deux
+cycles. Si le cache est purgé — ça arrive après une longue inactivité — un
+seul rapport rejoue des offres déjà vues, puis tout repart normalement.
+
+**Un piège à connaître :** GitHub désactive les workflows planifiés d'un dépôt
+resté **60 jours sans le moindre commit**, et prévient par email. Un commit,
+même trivial, remet le compteur à zéro.
+
+### Sur ta propre machine — si elle reste allumée
+
+Avec cron :
 
 ```cron
 0 */6 * * * cd "/home/ouattara/Documents/Robo emploie CI" && .venv/bin/python main.py >> journaux/cron.log 2>&1
 ```
 
-### Avec systemd — redémarre tout seul après une coupure
-
+Avec systemd, qui redémarre tout seul après une coupure —
 `~/.config/systemd/user/robot-emploi.service` :
 
 ```ini

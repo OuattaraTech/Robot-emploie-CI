@@ -1,0 +1,78 @@
+# ═══════════════════════════════════════════════════════════════════
+#  Veille automatique — le robot tourne sur les serveurs de GitHub,
+#  toutes les six heures, sans machine allumée chez soi.
+#
+#  Côte d'Ivoire = UTC+0 toute l'année : les heures ci-dessous sont
+#  aussi les heures locales. Rapports à 00 h, 06 h, 12 h et 18 h.
+# ═══════════════════════════════════════════════════════════════════
+
+name: Veille emploi
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  # Permet aussi de déclencher un cycle à la main depuis l'onglet
+  # Actions — pratique pour tester sans attendre six heures.
+  workflow_dispatch:
+
+# Deux cycles en même temps enverraient deux fois les mêmes offres.
+concurrency:
+  group: veille-emploi
+  cancel-in-progress: false
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      # La mémoire des annonces déjà vues doit survivre d'un cycle au
+      # suivant, sinon chaque rapport rejouerait tout. On la range dans
+      # le cache GitHub : une nouvelle entrée à chaque exécution, et on
+      # restaure toujours la plus récente.
+      - name: Restaurer la mémoire
+        uses: actions/cache@v4
+        with:
+          path: donnees
+          key: memoire-${{ github.run_id }}
+          restore-keys: |
+            memoire-
+
+      - name: Lancer un cycle
+        env:
+          SMTP_HOTE: ${{ secrets.SMTP_HOTE }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_UTILISATEUR: ${{ secrets.SMTP_UTILISATEUR }}
+          SMTP_MOTDEPASSE: ${{ secrets.SMTP_MOTDEPASSE }}
+          EMAIL_EXPEDITEUR: ${{ secrets.EMAIL_EXPEDITEUR }}
+          EMAIL_DESTINATAIRES: ${{ secrets.EMAIL_DESTINATAIRES }}
+          TELEGRAM_JETON: ${{ secrets.TELEGRAM_JETON }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py
+
+      - name: État de la mémoire
+        if: always()
+        run: python main.py --etat
+
+      # Le classeur du cycle reste téléchargeable depuis la page de
+      # l'exécution, même si l'email n'est pas arrivé.
+      - name: Conserver l'export Excel
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: offres-${{ github.run_number }}
+          path: exports/*.xlsx
+          if-no-files-found: ignore
+          retention-days: 30
