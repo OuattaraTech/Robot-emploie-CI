@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets : ne jamais versionner
+.env
+
+# Données produites par le robot
+donnees/*.sqlite3
+exports/*.xlsx
+journaux/*.log

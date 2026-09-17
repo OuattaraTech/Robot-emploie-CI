@@ -1,0 +1,12 @@
+# Robot Emploi CI — dépendances
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=5.0
+openpyxl>=3.1
+PyYAML>=6.0
+python-dotenv>=1.0
+
+# Optionnel : uniquement pour les sources en sommeil (emploici, afriwork),
+# qui réclament un vrai navigateur. Installer, puis lancer :
+#   playwright install chromium
+# playwright>=1.44
